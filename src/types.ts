@@ -9,7 +9,7 @@ export interface GameSettings {
   theme: Theme;
   selectedTeams: string[];
   pointsRequired: number; // 10-100
-  roundTimer: number; // 30-120, step 15
+  roundTimer: number; // 15-120, step 15
   skipPenalty: boolean;
 }
 

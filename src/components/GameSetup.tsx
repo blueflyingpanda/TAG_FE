@@ -99,7 +99,7 @@ export default function GameSetup({ theme, onStart, onBack }: GameSetupProps) {
           </label>
           <input
             type="range"
-            min="30"
+            min="15"
             max="120"
             step="15"
             value={roundTimer}
@@ -107,7 +107,7 @@ export default function GameSetup({ theme, onStart, onBack }: GameSetupProps) {
             className="w-full"
           />
           <div className="flex justify-between text-white/60 text-sm mt-1">
-            <span>30s</span>
+            <span>15s</span>
             <span>120s</span>
           </div>
         </div>

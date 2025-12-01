@@ -45,9 +45,35 @@ export default function ThemeSelection({
         throw new Error("Theme must have at least 100 words");
       }
 
+      // Prevent importing a theme with duplicate name+lang
+      const existing = storage
+        .getThemes()
+        .find(
+          (t) =>
+            t.lang === theme.lang &&
+            t.name.trim().toLowerCase() === theme.name.trim().toLowerCase()
+        );
+      if (existing) {
+        throw new Error("A theme with this name and language already exists");
+      }
+
       // Enforce exactly 10 teams
       if (!Array.isArray(theme.teams) || theme.teams.length !== 10) {
         throw new Error("Theme must contain exactly 10 teams");
+      }
+
+      // Ensure team names are unique
+      const teamNames = theme.teams.map((t) => String(t).trim().toLowerCase());
+      const uniqueTeamNames = new Set(teamNames);
+      if (uniqueTeamNames.size !== teamNames.length) {
+        throw new Error("Team names must be unique");
+      }
+
+      // Ensure words are unique
+      const wordValues = theme.words.map((w) => String(w).trim().toLowerCase());
+      const uniqueWords = new Set(wordValues);
+      if (uniqueWords.size !== wordValues.length) {
+        throw new Error("Words must be unique within a theme");
       }
 
       onImportTheme(theme);

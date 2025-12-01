@@ -20,6 +20,16 @@ export const storage = {
     if (!Array.isArray(theme.teams) || theme.teams.length !== 10) {
       throw new Error('Theme must contain exactly 10 teams');
     }
+    // Ensure team names are unique
+    const teamNames = theme.teams.map((t) => String(t).trim().toLowerCase());
+    if (new Set(teamNames).size !== teamNames.length) {
+      throw new Error('Team names must be unique');
+    }
+    // Ensure words are unique
+    const wordValues = theme.words.map((w) => String(w).trim().toLowerCase());
+    if (new Set(wordValues).size !== wordValues.length) {
+      throw new Error('Words must be unique within a theme');
+    }
     const themes = storage.getThemes();
     const existingIndex = themes.findIndex(
       (t) => t.name === theme.name && t.lang === theme.lang

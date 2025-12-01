@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Theme } from "../types";
+import { storage } from "../utils/storage";
 
 interface CreateThemeProps {
   user: { id: string; email: string; username: string };
@@ -32,10 +33,27 @@ export default function CreateTheme({
       return "Theme name must be 10 words or less";
     }
 
+    // Name uniqueness: same name+lang should not already exist
+    const existing = storage
+      .getThemes()
+      .find(
+        (t) =>
+          t.lang === lang &&
+          t.name.trim().toLowerCase() === name.trim().toLowerCase()
+      );
+    if (existing) {
+      return "A theme with this name and language already exists";
+    }
+
     // Teams validation - require exactly 10 teams
     const validTeams = teams.filter((t) => t.trim());
     if (validTeams.length !== 10) {
       return "Theme must contain exactly 10 teams";
+    }
+    // Ensure team names are unique (case-insensitive)
+    const teamNameSet = new Set(validTeams.map((t) => t.trim().toLowerCase()));
+    if (teamNameSet.size !== validTeams.length) {
+      return "Team names must be unique";
     }
     for (const team of validTeams) {
       if (team.length > 64) {
@@ -51,6 +69,11 @@ export default function CreateTheme({
     const validWords = words.filter((w) => w.trim());
     if (validWords.length < 100) {
       return "Theme must have at least 100 words";
+    }
+    // Ensure words are unique (case-insensitive)
+    const wordSet = new Set(validWords.map((w) => w.trim().toLowerCase()));
+    if (wordSet.size !== validWords.length) {
+      return "Words must be unique within a theme";
     }
     for (const word of validWords) {
       if (word.length > 64) {

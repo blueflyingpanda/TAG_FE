@@ -6,8 +6,14 @@ import GameSetup from "./components/GameSetup";
 import Login from "./components/Login";
 import RoundResults from "./components/RoundResults";
 import ThemeSelection from "./components/ThemeSelection";
-import type { GameSettings, GameState, Theme } from "./types";
+import type { GameSettings, GameState, Theme, User } from "./types";
 import { checkWinCondition, initializeGameState } from "./utils/game";
+import {
+  clearOAuthCallback,
+  clearStoredToken,
+  exchangeOAuthCode,
+  getCurrentUser,
+} from "./utils/oauth";
 import { storage } from "./utils/storage";
 
 type AppScreen =
@@ -28,7 +34,7 @@ function App() {
     if (savedState) return "game-play";
     return "theme-selection";
   });
-  const [user, setUser] = useState(initialUser);
+  const [user, setUser] = useState<User | null>(initialUser);
   const [selectedTheme, setSelectedTheme] = useState<Theme | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(() => {
     // Only restore game state if user is authenticated
@@ -42,6 +48,42 @@ function App() {
 
   // Hide header buttons while a game is in progress (until the game is finished)
   const hideHeaderButtons = screen === "game-play" && gameState !== null;
+
+  useEffect(() => {
+    // Handle OAuth callback from backend redirect
+    const handleOAuthCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get("code");
+
+      if (!code) {
+        // No code, check if we have a stored token
+        const userData = getCurrentUser();
+        if (userData) {
+          storage.saveUser(userData);
+          setUser(userData);
+        }
+        return;
+      }
+
+      try {
+        await exchangeOAuthCode(code);
+        clearOAuthCallback();
+        // Get user data from the new token
+        const userData = getCurrentUser();
+        if (userData) {
+          storage.saveUser(userData);
+          setUser(userData);
+          setScreen("theme-selection");
+        }
+      } catch (err) {
+        console.error("OAuth exchange failed:", err);
+        // Redirect back to login on error
+        setScreen("login");
+      }
+    };
+
+    handleOAuthCallback();
+  }, []);
 
   useEffect(() => {
     // Lock body scrolling when a game is in progress to prevent iOS bouncing/scroll
@@ -71,7 +113,8 @@ function App() {
   useEffect(() => {
     // Enforce authentication - redirect to login if user is not logged in
     if (!user && screen !== "login") {
-      setScreen("login");
+      // Schedule state update asynchronously to avoid cascading renders
+      setTimeout(() => setScreen("login"), 0);
     }
   }, [user, screen]);
 
@@ -80,8 +123,11 @@ function App() {
     if (user) {
       const savedState = storage.getGameState();
       if (savedState && !gameState) {
-        setGameState(savedState);
-        setScreen("game-play");
+        // Schedule state updates asynchronously to avoid cascading renders
+        setTimeout(() => {
+          setGameState(savedState);
+          setScreen("game-play");
+        }, 0);
       }
     }
   }, [gameState, user]);
@@ -93,17 +139,8 @@ function App() {
     }
   }, [gameState]);
 
-  const handleLogin = (userData: {
-    id: string;
-    email: string;
-    username: string;
-  }) => {
-    storage.saveUser(userData);
-    setUser(userData);
-    setScreen("theme-selection");
-  };
-
   const handleLogout = () => {
+    clearStoredToken();
     storage.clearUser();
     setUser(null);
     setScreen("login");
@@ -183,7 +220,7 @@ function App() {
     finalResults.forEach((result) => {
       if (result.guessed) {
         scoreChange += 1;
-      } else if (Boolean(gameState.settings.skipPenalty)) {
+      } else if (gameState.settings.skipPenalty) {
         // coerce to boolean in case settings were stored with non-boolean values
         scoreChange -= 1;
       }
@@ -262,6 +299,13 @@ function App() {
         {user && (
           <div className="mb-4 text-white text-center">
             <div className="flex items-center justify-center gap-4">
+              {user.picture && (
+                <img
+                  src={user.picture}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full border-2 border-white/20"
+                />
+              )}
               <div className="text-sm">{user.email}</div>
             </div>
 
@@ -305,7 +349,7 @@ function App() {
           </div>
         )}
 
-        {screen === "login" && <Login onLogin={handleLogin} />}
+        {screen === "login" && <Login />}
         {screen === "theme-selection" && user && (
           <ThemeSelection
             user={user}

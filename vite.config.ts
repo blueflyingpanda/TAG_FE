@@ -4,5 +4,10 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: './'  // relative paths so CSS/JS load locally
+  base: './', // relative paths so CSS/JS load locally
+  server: {
+    // Handle SPA routing in dev server
+    middlewareMode: false,
+  },
 })
+

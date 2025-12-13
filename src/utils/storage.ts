@@ -1,4 +1,4 @@
-import type { GameState, Theme } from '../types';
+import type { GameState, Theme, User } from '../types';
 
 const THEMES_STORAGE_KEY = 'tag_themes';
 const GAME_STATE_STORAGE_KEY = 'tag_game_state';
@@ -61,7 +61,7 @@ export const storage = {
   },
 
   // User
-  getUser: (): { id: string; email: string; username: string } | null => {
+  getUser: (): User | null => {
     try {
       const stored = localStorage.getItem(USER_STORAGE_KEY);
       return stored ? JSON.parse(stored) : null;
@@ -70,7 +70,7 @@ export const storage = {
     }
   },
 
-  saveUser: (user: { id: string; email: string; username: string }): void => {
+  saveUser: (user: User): void => {
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
   },
 

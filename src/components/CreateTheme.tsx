@@ -1,9 +1,9 @@
 import { useState } from "react";
-import type { Theme } from "../types";
+import type { Theme, User } from "../types";
 import { storage } from "../utils/storage";
 
 interface CreateThemeProps {
-  user: { id: string; email: string; username: string };
+  user: User;
   onBack: () => void;
   onThemeCreated?: (theme: Theme) => void;
 }

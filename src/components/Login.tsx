@@ -1,24 +1,12 @@
-import { useState } from 'react';
+import { useState } from "react";
 
-interface LoginProps {
-  onLogin: (user: { id: string; email: string; username: string }) => void;
-}
-
-export default function Login({ onLogin }: LoginProps) {
+export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
-    // TODO: Implement Google OAuth2
-    // For now, simulate login with mock data
-    setTimeout(() => {
-      onLogin({
-        id: '1',
-        email: 'user@example.com',
-        username: 'user',
-      });
-      setIsLoading(false);
-    }, 500);
+    // Redirect to backend for OAuth flow; backend will redirect back to FE with code
+    window.location.href = "http://localhost:8000/auth/login";
   };
 
   return (
@@ -32,7 +20,7 @@ export default function Login({ onLogin }: LoginProps) {
         className="w-full px-6 py-4 bg-white text-[#223164] rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-3"
       >
         {isLoading ? (
-          'Loading...'
+          "Loading..."
         ) : (
           <>
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -60,4 +48,3 @@ export default function Login({ onLogin }: LoginProps) {
     </div>
   );
 }
-

@@ -6,18 +6,32 @@ interface ThemeSelectionProps {
   user: User | null;
   onThemeSelect: (theme: Theme) => void;
   onCreateTheme?: () => void;
+  onThemeDetails?: (themeId: number) => void;
+}
+
+function renderDifficultyStars(difficulty: number): string {
+  const stars = "⭐".repeat(difficulty);
+  const emptyStars = "☆".repeat(5 - difficulty);
+  return stars + emptyStars;
+}
+
+function renderVerificationStatus(verified: boolean): string {
+  return verified ? "✅" : "❌";
 }
 
 export default function ThemeSelection({
   user,
   onThemeSelect,
   onCreateTheme,
+  onThemeDetails,
 }: ThemeSelectionProps) {
   const [themes, setThemes] = useState<ThemeListItem[]>([]);
   const [selectedLang, setSelectedLang] = useState("en");
   const [selectedDifficulty, setSelectedDifficulty] = useState<
     number | undefined
   >(undefined);
+  const [onlyMyThemes, setOnlyMyThemes] = useState(false);
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [showUnverified, setShowUnverified] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -31,7 +45,10 @@ export default function ThemeSelection({
         50,
         selectedLang,
         selectedDifficulty,
-        searchTerm || undefined
+        searchTerm || undefined,
+        onlyMyThemes,
+        showUnverified ? false : undefined, // verified - false when showing unverified, undefined otherwise
+        onlyFavorites
       );
       setThemes(response.items);
     } catch (err) {
@@ -41,7 +58,13 @@ export default function ThemeSelection({
 
   useEffect(() => {
     fetchThemes();
-  }, []);
+  }, [
+    selectedLang,
+    selectedDifficulty,
+    onlyMyThemes,
+    onlyFavorites,
+    showUnverified,
+  ]);
 
   const handleThemeSelect = async (themeItem: ThemeListItem) => {
     try {
@@ -69,6 +92,11 @@ export default function ThemeSelection({
         throw new Error(
           "Invalid theme format. Expected API format with name, language, difficulty, and description object"
         );
+      }
+
+      // Set default public to true if not specified
+      if (themeData.public === undefined) {
+        themeData.public = true;
       }
 
       if (themeData.description.words.length < 100) {
@@ -202,6 +230,36 @@ export default function ThemeSelection({
           </div>
         )}
 
+        {user && (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="only-my-themes"
+              checked={onlyMyThemes}
+              onChange={(e) => setOnlyMyThemes(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <label htmlFor="only-my-themes" className="text-white/80">
+              Only my themes
+            </label>
+          </div>
+        )}
+
+        {user && (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="only-favorites"
+              checked={onlyFavorites}
+              onChange={(e) => setOnlyFavorites(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <label htmlFor="only-favorites" className="text-white/80">
+              Only favorites
+            </label>
+          </div>
+        )}
+
         <button
           onClick={() => setShowImportDialog(true)}
           className="px-6 py-2 bg-[#ECACAE] text-[#223164] rounded-lg font-semibold hover:opacity-90 transition"
@@ -229,12 +287,19 @@ export default function ThemeSelection({
         {themes.map((theme) => (
           <button
             key={theme.id}
-            onClick={() => handleThemeSelect(theme)}
+            onClick={() =>
+              onThemeDetails
+                ? onThemeDetails(theme.id)
+                : handleThemeSelect(theme)
+            }
             className="p-4 bg-white/10 rounded-lg hover:bg-white/20 transition text-left"
           >
             <h3 className="text-white font-semibold mb-2">{theme.name}</h3>
+            <p className="text-white/60 text-sm mb-1">
+              Difficulty: {renderDifficultyStars(theme.difficulty)}
+            </p>
             <p className="text-white/60 text-sm">
-              Difficulty: {theme.difficulty}
+              Status: {renderVerificationStatus(theme.verified)}
             </p>
           </button>
         ))}

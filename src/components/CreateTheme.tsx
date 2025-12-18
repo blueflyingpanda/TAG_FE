@@ -16,6 +16,7 @@ export default function CreateTheme({
   const [lang, setLang] = useState("en");
   const [name, setName] = useState("");
   const [difficulty, setDifficulty] = useState(3);
+  const [isPublic, setIsPublic] = useState(true);
   const [teams, setTeams] = useState<string[]>([""]);
   const [words, setWords] = useState<string[]>([""]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -131,6 +132,7 @@ export default function CreateTheme({
       name: name.trim(),
       language: lang,
       difficulty,
+      public: isPublic,
       description: {
         words: words.filter((w) => w.trim()).map((w) => w.trim()),
         teams: teams.filter((t) => t.trim()).map((t) => t.trim()),
@@ -243,6 +245,22 @@ export default function CreateTheme({
             <option value={4}>4 - Hard</option>
             <option value={5}>5 - Very Hard</option>
           </select>
+        </div>
+
+        <div>
+          <label className="text-white font-semibold mb-2 block">Public</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="is-public"
+              checked={isPublic}
+              onChange={(e) => setIsPublic(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <label htmlFor="is-public" className="text-white/80">
+              Make this theme public
+            </label>
+          </div>
         </div>
 
         <div>

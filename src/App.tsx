@@ -5,6 +5,7 @@ import GamePlay from "./components/GamePlay";
 import GameSetup from "./components/GameSetup";
 import Login from "./components/Login";
 import RoundResults from "./components/RoundResults";
+import ThemeDetails from "./components/ThemeDetails";
 import ThemeSelection from "./components/ThemeSelection";
 import type { GameSettings, GameState, Theme, User } from "./types";
 import { checkWinCondition, initializeGameState } from "./utils/game";
@@ -19,6 +20,7 @@ import { storage } from "./utils/storage";
 type AppScreen =
   | "login"
   | "theme-selection"
+  | "theme-details"
   | "game-setup"
   | "game-play"
   | "round-results"
@@ -36,6 +38,7 @@ function App() {
   });
   const [user, setUser] = useState<User | null>(initialUser);
   const [selectedTheme, setSelectedTheme] = useState<Theme | null>(null);
+  const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(() => {
     // Only restore game state if user is authenticated
     return initialUser ? storage.getGameState() : null;
@@ -355,6 +358,18 @@ function App() {
             user={user}
             onThemeSelect={handleThemeSelect}
             onCreateTheme={() => setScreen("create-theme")}
+            onThemeDetails={(themeId) => {
+              setSelectedThemeId(themeId);
+              setScreen("theme-details");
+            }}
+          />
+        )}
+        {screen === "theme-details" && user && selectedThemeId && (
+          <ThemeDetails
+            user={user}
+            themeId={selectedThemeId}
+            onBack={() => setScreen("theme-selection")}
+            onThemeSelect={handleThemeSelect}
           />
         )}
         {screen === "create-theme" && user && (
@@ -363,12 +378,6 @@ function App() {
             onBack={() => setScreen("theme-selection")}
             onThemeCreated={(theme) => {
               // Theme will be registered on backend (verified=false)
-              // Save locally for now and show success message
-              try {
-                storage.saveTheme(theme);
-              } catch (err) {
-                console.error("Failed to save theme locally:", err);
-              }
               console.log("Theme created and registered:", theme);
               setScreen("theme-selection");
             }}

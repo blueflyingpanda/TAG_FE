@@ -3,12 +3,16 @@ export interface Theme {
   name: string;
   language: string; // ISO 639 alpha-2
   difficulty: number; // 1-5
+  public: boolean;
+  verified: boolean;
   description: {
     words: string[];
     teams: string[];
   };
   played_count?: number;
   last_played?: string | null;
+  likes_count?: number;
+  is_favorited?: boolean;
   creator?: {
     email: string;
     picture?: string;
@@ -21,12 +25,21 @@ export interface ThemeListItem {
   name: string;
   language: string;
   difficulty: number;
+  public: boolean;
+  verified: boolean;
+  likes_count?: number;
+  creator?: {
+    email: string;
+    picture?: string;
+    admin?: boolean;
+  };
 }
 
 export interface ThemePayload {
   name: string;
   language?: string;
   difficulty?: number;
+  public?: boolean;
   description: {
     words: string[];
     teams: string[];

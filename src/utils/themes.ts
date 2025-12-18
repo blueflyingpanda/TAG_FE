@@ -11,7 +11,10 @@ export async function getThemes(
   size = 50,
   language?: string,
   difficulty?: number,
-  name?: string
+  name?: string,
+  mine?: boolean,
+  verified?: boolean,
+  favourites?: boolean
 ): Promise<PaginatedThemes> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -21,21 +24,33 @@ export async function getThemes(
   if (language) params.append('language', language);
   if (difficulty) params.append('difficulty', difficulty.toString());
   if (name) params.append('name', name);
+  if (mine !== undefined) params.append('mine', mine.toString());
+  if (verified !== undefined) params.append('verified', verified.toString());
+  if (favourites !== undefined) params.append('favourites', favourites.toString());
 
-  const response = await fetch(`${API_BASE}/themes/?${params.toString()}`);
+  const response = await authenticatedFetch(`${API_BASE}/themes/?${params.toString()}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch themes: ${response.statusText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Transform API response to match our interface
+  return {
+    ...data,
+    items: data.items.map((item: any) => ({
+      ...item,
+      likes_count: item.likes,
+    })),
+  };
 }
 
 /**
  * Get theme details by ID
  */
 export async function getTheme(themeId: number): Promise<Theme> {
-  const response = await fetch(`${API_BASE}/themes/${themeId}`);
+  const response = await authenticatedFetch(`${API_BASE}/themes/${themeId}`);
 
   if (!response.ok) {
     if (response.status === 404) {
@@ -44,7 +59,14 @@ export async function getTheme(themeId: number): Promise<Theme> {
     throw new Error(`Failed to fetch theme: ${response.statusText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Transform API response to match our interface
+  return {
+    ...data,
+    likes_count: data.likes,
+    is_favorited: data.favourite,
+  };
 }
 
 /**
@@ -66,7 +88,40 @@ export async function createTheme(themeData: ThemePayload): Promise<Theme> {
     throw new Error(`Failed to create theme: ${response.statusText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Transform API response to match our interface
+  return {
+    ...data,
+    likes_count: data.likes,
+    is_favorited: data.favourite,
+  };
+}
+
+/**
+ * Add theme to favorites
+ */
+export async function addThemeToFavorites(themeId: number): Promise<void> {
+  const response = await authenticatedFetch(`${API_BASE}/themes/${themeId}/favourite`, {
+    method: 'POST',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to add theme to favorites: ${response.statusText}`);
+  }
+}
+
+/**
+ * Remove theme from favorites
+ */
+export async function removeThemeFromFavorites(themeId: number): Promise<void> {
+  const response = await authenticatedFetch(`${API_BASE}/themes/${themeId}/favourite`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to remove theme from favorites: ${response.statusText}`);
+  }
 }
 
 /**

@@ -1,3 +1,13 @@
+export const ThemeOrderBy = {
+  ID: 'id',
+  NAME: 'name',
+  PLAYED_COUNT: 'played_count',
+  LAST_PLAYED: 'last_played',
+  LIKES: 'likes',
+} as const;
+
+export type ThemeOrderByType = typeof ThemeOrderBy[keyof typeof ThemeOrderBy];
+
 export interface Theme {
   id: number;
   name: string;

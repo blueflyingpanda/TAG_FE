@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import type { Theme, ThemeListItem, User } from "../types";
+import type { Theme, ThemeListItem, ThemeOrderByType, User } from "../types";
+import { ThemeOrderBy } from "../types";
 import { createTheme, getTheme, getThemes } from "../utils/themes";
 
 interface ThemeSelectionProps {
   user: User | null;
   onThemeSelect: (theme: Theme) => void;
   onCreateTheme?: () => void;
-  onThemeDetails?: (themeId: number) => void;
+  onThemeDetails?: (themeId: number, filters?: URLSearchParams) => void;
 }
 
 function renderDifficultyStars(difficulty: number): string {
@@ -19,24 +20,96 @@ function renderVerificationStatus(verified: boolean): string {
   return verified ? "✅" : "❌";
 }
 
+// URL parameter management
+function getFiltersFromURL(): {
+  selectedLang: string;
+  selectedDifficulty: number | undefined;
+  searchTerm: string;
+  orderBy: ThemeOrderByType;
+  orderDescending: boolean;
+  onlyMyThemes: boolean;
+  onlyFavorites: boolean;
+  showUnverified: boolean;
+} {
+  const urlParams = new URLSearchParams(window.location.search);
+
+  return {
+    selectedLang: urlParams.get("lang") || "en",
+    selectedDifficulty: urlParams.get("difficulty")
+      ? parseInt(urlParams.get("difficulty")!)
+      : undefined,
+    searchTerm: urlParams.get("search") || "",
+    orderBy: (urlParams.get("order") as ThemeOrderByType) || ThemeOrderBy.ID,
+    orderDescending: urlParams.get("descending") === "true",
+    onlyMyThemes: urlParams.get("mine") === "true",
+    onlyFavorites: urlParams.get("favourites") === "true",
+    showUnverified: urlParams.get("unverified") === "true",
+  };
+}
+
+function updateURLWithFilters(filters: {
+  selectedLang: string;
+  selectedDifficulty: number | undefined;
+  searchTerm: string;
+  orderBy: ThemeOrderByType;
+  orderDescending: boolean;
+  onlyMyThemes: boolean;
+  onlyFavorites: boolean;
+  showUnverified: boolean;
+}) {
+  const url = new URL(window.location.href);
+
+  // Clear existing params
+  url.search = "";
+
+  // Set new params
+  if (filters.selectedLang !== "en")
+    url.searchParams.set("lang", filters.selectedLang);
+  if (filters.selectedDifficulty)
+    url.searchParams.set("difficulty", filters.selectedDifficulty.toString());
+  if (filters.searchTerm) url.searchParams.set("search", filters.searchTerm);
+  if (filters.orderBy !== ThemeOrderBy.ID)
+    url.searchParams.set("order", filters.orderBy);
+  if (filters.orderDescending) url.searchParams.set("descending", "true");
+  if (filters.onlyMyThemes) url.searchParams.set("mine", "true");
+  if (filters.onlyFavorites) url.searchParams.set("favourites", "true");
+  if (filters.showUnverified) url.searchParams.set("unverified", "true");
+
+  // Update URL without triggering page reload
+  window.history.replaceState({}, "", url.toString());
+}
+
 export default function ThemeSelection({
   user,
   onThemeSelect,
   onCreateTheme,
   onThemeDetails,
 }: ThemeSelectionProps) {
+  // Initialize state from URL parameters
+  const initialFilters = getFiltersFromURL();
+
   const [themes, setThemes] = useState<ThemeListItem[]>([]);
-  const [selectedLang, setSelectedLang] = useState("en");
+  const [selectedLang, setSelectedLang] = useState(initialFilters.selectedLang);
   const [selectedDifficulty, setSelectedDifficulty] = useState<
     number | undefined
-  >(undefined);
-  const [onlyMyThemes, setOnlyMyThemes] = useState(false);
-  const [onlyFavorites, setOnlyFavorites] = useState(false);
-  const [showUnverified, setShowUnverified] = useState(false);
+  >(initialFilters.selectedDifficulty);
+  const [onlyMyThemes, setOnlyMyThemes] = useState(initialFilters.onlyMyThemes);
+  const [onlyFavorites, setOnlyFavorites] = useState(
+    initialFilters.onlyFavorites
+  );
+  const [showUnverified, setShowUnverified] = useState(
+    initialFilters.showUnverified
+  );
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initialFilters.searchTerm);
   const [importJson, setImportJson] = useState("");
   const [importError, setImportError] = useState("");
+  const [orderBy, setOrderBy] = useState<ThemeOrderByType>(
+    initialFilters.orderBy
+  );
+  const [orderDescending, setOrderDescending] = useState(
+    initialFilters.orderDescending
+  );
 
   const fetchThemes = async () => {
     try {
@@ -48,7 +121,9 @@ export default function ThemeSelection({
         searchTerm || undefined,
         onlyMyThemes,
         showUnverified ? false : undefined, // verified - false when showing unverified, undefined otherwise
-        onlyFavorites
+        onlyFavorites,
+        orderBy,
+        orderDescending
       );
       setThemes(response.items);
     } catch (err) {
@@ -61,6 +136,31 @@ export default function ThemeSelection({
   }, [
     selectedLang,
     selectedDifficulty,
+    onlyMyThemes,
+    onlyFavorites,
+    showUnverified,
+    orderBy,
+    orderDescending,
+  ]);
+
+  // Update URL when filters change
+  useEffect(() => {
+    updateURLWithFilters({
+      selectedLang,
+      selectedDifficulty,
+      searchTerm,
+      orderBy,
+      orderDescending,
+      onlyMyThemes,
+      onlyFavorites,
+      showUnverified,
+    });
+  }, [
+    selectedLang,
+    selectedDifficulty,
+    searchTerm,
+    orderBy,
+    orderDescending,
     onlyMyThemes,
     onlyFavorites,
     showUnverified,
@@ -163,118 +263,153 @@ export default function ThemeSelection({
         Select Theme
       </h1>
 
-      <div className="mb-6 flex flex-wrap gap-4 items-center justify-center">
-        <div>
-          <label className="text-white/80 mb-2 block">Language</label>
-          <select
-            value={selectedLang}
-            onChange={(e) => setSelectedLang(e.target.value)}
-            className="px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#ECACAE]"
-          >
-            <option value="en">English</option>
-            <option value="ru">Russian</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="text-white/80 mb-2 block">Difficulty</label>
-          <select
-            value={selectedDifficulty || ""}
-            onChange={(e) =>
-              setSelectedDifficulty(
-                e.target.value ? parseInt(e.target.value) : undefined
-              )
-            }
-            className="px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#ECACAE]"
-          >
-            <option value="">All</option>
-            <option value="1">1 - Very Easy</option>
-            <option value="2">2 - Easy</option>
-            <option value="3">3 - Medium</option>
-            <option value="4">4 - Hard</option>
-            <option value="5">5 - Very Hard</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="text-white/80 mb-2 block">Search</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search themes..."
-              className="px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#ECACAE] placeholder-white/50"
-            />
-            <button
-              onClick={fetchThemes}
-              className="px-4 py-2 bg-[#ECACAE] text-[#223164] rounded-lg font-semibold hover:opacity-90 transition"
+      <div className="mb-6 space-y-4">
+        {/* Row 1: Filtering */}
+        <div className="flex flex-wrap gap-4 items-end justify-center">
+          <div>
+            <label className="text-white/80 mb-2 block">Language</label>
+            <select
+              value={selectedLang}
+              onChange={(e) => setSelectedLang(e.target.value)}
+              className="px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#ECACAE]"
             >
-              Search
-            </button>
+              <option value="en">English</option>
+              <option value="ru">Russian</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-white/80 mb-2 block">Difficulty</label>
+            <select
+              value={selectedDifficulty || ""}
+              onChange={(e) =>
+                setSelectedDifficulty(
+                  e.target.value ? parseInt(e.target.value) : undefined
+                )
+              }
+              className="px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#ECACAE]"
+            >
+              <option value="">All</option>
+              <option value="1">1 - Very Easy</option>
+              <option value="2">2 - Easy</option>
+              <option value="3">3 - Medium</option>
+              <option value="4">4 - Hard</option>
+              <option value="5">5 - Very Hard</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-white/80 mb-2 block">Search</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search themes..."
+                className="px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#ECACAE] placeholder-white/50"
+              />
+              <button
+                onClick={fetchThemes}
+                className="px-4 py-2 bg-[#ECACAE] text-[#223164] rounded-lg font-semibold hover:opacity-90 transition"
+              >
+                Search
+              </button>
+            </div>
           </div>
         </div>
 
+        {/* Row 2: Ordering */}
+        <div className="flex flex-wrap gap-4 items-end justify-center">
+          <div>
+            <label className="text-white/80 mb-2 block">Order By</label>
+            <select
+              value={orderBy}
+              onChange={(e) => setOrderBy(e.target.value as ThemeOrderByType)}
+              className="px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#ECACAE]"
+            >
+              <option value={ThemeOrderBy.ID}>Creation Date</option>
+              <option value={ThemeOrderBy.NAME}>Name</option>
+              <option value={ThemeOrderBy.PLAYED_COUNT}>Popularity</option>
+              <option value={ThemeOrderBy.LAST_PLAYED}>Last Played</option>
+              <option value={ThemeOrderBy.LIKES}>Likes</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-white/80 mb-2 block">Order Direction</label>
+            <select
+              value={orderDescending ? "desc" : "asc"}
+              onChange={(e) => setOrderDescending(e.target.value === "desc")}
+              className="px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#ECACAE]"
+            >
+              <option value="asc">Ascending</option>
+              <option value="desc">Descending</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Row 3: Modifiers */}
         {user && (
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="show-unverified"
-              checked={showUnverified}
-              onChange={(e) => setShowUnverified(e.target.checked)}
-              className="w-4 h-4"
-            />
-            <label htmlFor="show-unverified" className="text-white/80">
-              Show unverified themes
-            </label>
+          <div className="flex flex-wrap gap-6 items-center justify-center">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="show-unverified"
+                checked={showUnverified}
+                onChange={(e) => setShowUnverified(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <label htmlFor="show-unverified" className="text-white/80">
+                Show unverified themes
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="only-my-themes"
+                checked={onlyMyThemes}
+                onChange={(e) => setOnlyMyThemes(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <label htmlFor="only-my-themes" className="text-white/80">
+                Only my themes
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="only-favorites"
+                checked={onlyFavorites}
+                onChange={(e) => setOnlyFavorites(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <label htmlFor="only-favorites" className="text-white/80">
+                Only favorites
+              </label>
+            </div>
           </div>
         )}
 
-        {user && (
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="only-my-themes"
-              checked={onlyMyThemes}
-              onChange={(e) => setOnlyMyThemes(e.target.checked)}
-              className="w-4 h-4"
-            />
-            <label htmlFor="only-my-themes" className="text-white/80">
-              Only my themes
-            </label>
-          </div>
-        )}
-
-        {user && (
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="only-favorites"
-              checked={onlyFavorites}
-              onChange={(e) => setOnlyFavorites(e.target.checked)}
-              className="w-4 h-4"
-            />
-            <label htmlFor="only-favorites" className="text-white/80">
-              Only favorites
-            </label>
-          </div>
-        )}
-
-        <button
-          onClick={() => setShowImportDialog(true)}
-          className="px-6 py-2 bg-[#ECACAE] text-[#223164] rounded-lg font-semibold hover:opacity-90 transition"
-        >
-          Import Theme
-        </button>
-
-        {user && (
+        {/* Row 4: Action buttons */}
+        <div className="flex flex-wrap gap-4 items-center justify-center">
           <button
-            onClick={() => onCreateTheme?.()}
+            onClick={() => setShowImportDialog(true)}
             className="px-6 py-2 bg-[#ECACAE] text-[#223164] rounded-lg font-semibold hover:opacity-90 transition"
           >
-            Create Theme
+            Import Theme
           </button>
-        )}
+
+          {user && (
+            <button
+              onClick={() => onCreateTheme?.()}
+              className="px-6 py-2 bg-[#ECACAE] text-[#223164] rounded-lg font-semibold hover:opacity-90 transition"
+            >
+              Create Theme
+            </button>
+          )}
+        </div>
       </div>
 
       {showUnverified && (
@@ -287,11 +422,23 @@ export default function ThemeSelection({
         {themes.map((theme) => (
           <button
             key={theme.id}
-            onClick={() =>
-              onThemeDetails
-                ? onThemeDetails(theme.id)
-                : handleThemeSelect(theme)
-            }
+            onClick={() => {
+              if (onThemeDetails) {
+                const filters = new URLSearchParams();
+                if (selectedLang !== "en") filters.set("lang", selectedLang);
+                if (selectedDifficulty)
+                  filters.set("difficulty", selectedDifficulty.toString());
+                if (searchTerm) filters.set("search", searchTerm);
+                if (orderBy !== ThemeOrderBy.ID) filters.set("order", orderBy);
+                if (orderDescending) filters.set("descending", "true");
+                if (onlyMyThemes) filters.set("mine", "true");
+                if (onlyFavorites) filters.set("favourites", "true");
+                if (showUnverified) filters.set("unverified", "true");
+                onThemeDetails(theme.id, filters);
+              } else {
+                handleThemeSelect(theme);
+              }
+            }}
             className="p-4 bg-white/10 rounded-lg hover:bg-white/20 transition text-left"
           >
             <h3 className="text-white font-semibold mb-2">{theme.name}</h3>

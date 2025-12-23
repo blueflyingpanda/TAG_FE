@@ -9,8 +9,9 @@ import {
 interface ThemeDetailsProps {
   user: User;
   themeId: number;
-  onBack: () => void;
+  onBack: (filters?: URLSearchParams) => void;
   onThemeSelect?: (theme: Theme) => void;
+  filters?: URLSearchParams;
 }
 
 function renderDifficultyStars(difficulty: number): string {
@@ -28,6 +29,7 @@ export default function ThemeDetails({
   themeId,
   onBack,
   onThemeSelect,
+  filters,
 }: ThemeDetailsProps) {
   const [theme, setTheme] = useState<Theme | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,7 +97,7 @@ export default function ThemeDetails({
           {error || "Theme not found"}
         </div>
         <button
-          onClick={onBack}
+          onClick={() => onBack(filters)}
           className="px-6 py-2 bg-[#ECACAE] text-[#223164] rounded-lg font-semibold hover:opacity-90 transition"
         >
           Back
@@ -108,7 +110,7 @@ export default function ThemeDetails({
     <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 shadow-xl max-w-4xl w-full mx-auto">
       <div className="flex items-center justify-between mb-6">
         <button
-          onClick={onBack}
+          onClick={() => onBack(filters)}
           className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition"
         >
           ← Back

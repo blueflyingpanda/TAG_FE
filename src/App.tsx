@@ -39,6 +39,9 @@ function App() {
   const [user, setUser] = useState<User | null>(initialUser);
   const [selectedTheme, setSelectedTheme] = useState<Theme | null>(null);
   const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null);
+  const [themeFilters, setThemeFilters] = useState<URLSearchParams | null>(
+    null
+  );
   const [gameState, setGameState] = useState<GameState | null>(() => {
     // Only restore game state if user is authenticated
     return initialUser ? storage.getGameState() : null;
@@ -358,8 +361,9 @@ function App() {
             user={user}
             onThemeSelect={handleThemeSelect}
             onCreateTheme={() => setScreen("create-theme")}
-            onThemeDetails={(themeId) => {
+            onThemeDetails={(themeId, filters) => {
               setSelectedThemeId(themeId);
+              setThemeFilters(filters || null);
               setScreen("theme-details");
             }}
           />
@@ -368,7 +372,16 @@ function App() {
           <ThemeDetails
             user={user}
             themeId={selectedThemeId}
-            onBack={() => setScreen("theme-selection")}
+            filters={themeFilters || undefined}
+            onBack={(filters) => {
+              // Restore filters to URL if provided
+              if (filters) {
+                const url = new URL(window.location.href);
+                url.search = filters.toString();
+                window.history.replaceState({}, "", url.toString());
+              }
+              setScreen("theme-selection");
+            }}
             onThemeSelect={handleThemeSelect}
           />
         )}

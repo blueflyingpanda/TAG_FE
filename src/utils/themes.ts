@@ -14,7 +14,9 @@ export async function getThemes(
   name?: string,
   mine?: boolean,
   verified?: boolean,
-  favourites?: boolean
+  favourites?: boolean,
+  order?: string,
+  descending?: boolean
 ): Promise<PaginatedThemes> {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -27,6 +29,8 @@ export async function getThemes(
   if (mine !== undefined) params.append('mine', mine.toString());
   if (verified !== undefined) params.append('verified', verified.toString());
   if (favourites !== undefined) params.append('favourites', favourites.toString());
+  if (order) params.append('order', order);
+  if (descending !== undefined) params.append('descending', descending.toString());
 
   const response = await authenticatedFetch(`${API_BASE}/themes/?${params.toString()}`);
 

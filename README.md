@@ -1,73 +1,230 @@
-# React + TypeScript + Vite
+# Themed Alias Game (TAG)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, web-based implementation of the popular word-guessing game Alias, built with React, TypeScript, and Framer Motion.
 
-Currently, two official plugins are available:
+## 🎮 Game Rules
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+**Alias** is a fun word-guessing game where teams compete to guess as many words as possible within a time limit.
 
-## React Compiler
+### Basic Gameplay
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Players are divided into teams
+- One team player plays at a time while others guess
+- The playing team gets a word and must describe it without saying the word itself
+- Teammates try to guess the word
+- Points are awarded for correct guesses
+- The round ends when time runs out or all words are used
 
-## Expanding the ESLint configuration
+### Scoring
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Correct guess**: +1 point
+- **Skip penalty**: -1 point (if enabled)
+- First team to reach the target score wins
+- If no team reaches the target when words run out, the team with highest score wins
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## ✨ Features
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 🎨 Theme Management
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+#### Theme Creation
+
+- Create custom word themes with your own word lists
+- Themes can be marked as public or private (public themes are verified by the admin)
+- Share themes with other players
+
+#### Theme Import
+
+- Import themes from external sources in JSON format
+- Theme can be created from inside the app using theme constructor
+
+#### Theme Filtering & Search
+
+- **Difficulty**: Filter themes by difficulty level
+- **Language**: Filter themes by language
+- **My Themes**: Show only themes you created
+- **Favorites**: Show only your favorite themes
+- **Unverified**: Include/exclude unverified themes
+- **Search**: Find themes by name
+
+#### Theme Ordering
+
+- Sort themes by popularity, creation date, or alphabetically
+
+### 📊 Game History & Resumption
+
+#### Game History
+
+- View all your completed games
+- See final scores and winners
+- Track your gaming statistics
+
+#### Game Resumption
+
+- Resume unfinished games from where you left off
+- Games are automatically saved locally and synced to the server
+
+### ⚙️ Game Configuration
+
+#### Points Required
+
+- Set the target score to win the game
+- Default: 50 points
+
+#### Round Timer
+
+- Set the time limit for each round
+- Range: 15-300 seconds
+- Default: 60 seconds
+
+#### Skip Penalty
+
+- Enable/disable point deduction for skipped words
+- When enabled: -1 point per skip
+- When disabled: no penalty for skips
+
+### 🛡️ Cheating Detection
+
+#### Round Start Time Tracking
+
+- Monitors when players start rounds
+- Detects suspicious timing patterns
+- Prevents cheating by ensuring fair play
+
+### ✅ Round Result Confirmation
+
+#### Interactive Review
+
+- After each round, review all guessed and skipped words
+- Tap words to toggle between correct/incorrect
+- Confirm final results before proceeding
+- Prevents accidental score errors
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone <repository-url>
+cd tag
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Install dependencies:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
+
+3. Start the development server:
+
+```bash
+npm run dev
+```
+
+4. Build for production:
+
+```bash
+npm run build
+```
+
+### Authentication
+
+- Sign in with Google OAuth
+- User profiles are managed automatically
+
+## 🎯 How to Play
+
+### 1. Choose a Theme
+
+- Browse available themes
+- Use filters to find the perfect theme
+- Create your own theme if desired
+
+### 2. Configure Game
+
+- Set number of teams and team names
+- Configure points required, round timer, and skip penalty
+- Start the game
+
+### 3. Play Rounds
+
+- Current team describes words to teammates
+- Click "Guessed" for correct answers, "Skip" for difficult words
+- Monitor time remaining and progress
+
+### 4. Confirm Results
+
+- Review round results
+- Toggle any incorrect classifications
+- Confirm to update scores
+
+### 5. Win Condition
+
+- Game ends when a team reaches the target score
+- Or when all words are used (highest score wins)
+
+## 🏗️ Technical Stack
+
+- **Frontend**: React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Build Tool**: Vite
+- **Backend**: REST API
+- **Authentication**: Google OAuth 2.0
+- **Storage**: Local Storage + Server Sync
+
+## 📱 Features Overview
+
+### Responsive Design
+
+- Works on desktop and mobile devices
+- Touch-friendly interface for mobile play
+
+### Real-time Updates
+
+- Live score updates
+- Timer synchronization
+- Automatic game state saving
+
+### Multiplayer Support
+
+- Local multiplayer (same device)
+- Future: Online multiplayer support
+
+## 🔧 Configuration Options
+
+### Game Settings
+
+- **Points Required**: 10-500 (default: 50)
+- **Round Timer**: 15-300 seconds (default: 60)
+- **Skip Penalty**: On/Off (default: On)
+
+### Theme Settings
+
+- **Words per theme**: not less than 100
+- **Difficulty levels**: Very Easy, Easy, Medium, Hard, Very Hard
+- **Languages**: Multiple language support
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🙏 Acknowledgments
+
+- Inspired by the classic Alias board game
+- Built with modern web technologies
+- Community-driven theme creation

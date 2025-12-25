@@ -1,3 +1,4 @@
+import { AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import CreateTheme from "./components/CreateTheme";
 import GameHistory from "./components/GameHistory";
@@ -265,8 +266,8 @@ function App() {
     // Ignore late or duplicate end signals if the game already has a winner
     // (for example a pending timeout firing after the round was already
     // confirmed) — in that case the game should have stopped.
-    const existingWinner = checkWinCondition(gameState);
-    if (existingWinner) return;
+    const existingWinners = checkWinCondition(gameState);
+    if (existingWinners.length > 0) return;
 
     // (previous duplicate-guard removed) process incoming results
 
@@ -326,9 +327,9 @@ function App() {
     updateGameViaAPI(tempStateForAPI);
 
     // Check if win condition is reached after updating score
-    const winner = checkWinCondition(updatedState);
+    const winners = checkWinCondition(updatedState);
 
-    if (winner) {
+    if (winners.length > 0) {
       // Game ends - show winner screen immediately
       storage.clearGameState();
       setGameState(updatedState);
@@ -469,81 +470,82 @@ function App() {
           </div>
         )}
 
-        {screen === "login" && <Login />}
-        {screen === "theme-selection" && user && (
-          <ThemeSelection
-            user={user}
-            onThemeSelect={handleThemeSelect}
-            onCreateTheme={() => setScreen("create-theme")}
-            onThemeDetails={(themeId, filters) => {
-              setSelectedThemeId(themeId);
-              setThemeFilters(filters || null);
-              setScreen("theme-details");
-            }}
-          />
-        )}
-        {screen === "theme-details" && user && selectedThemeId && (
-          <ThemeDetails
-            user={user}
-            themeId={selectedThemeId}
-            filters={themeFilters || undefined}
-            onBack={(filters) => {
-              // Restore filters to URL if provided
-              if (filters) {
-                const url = new URL(window.location.href);
-                url.search = filters.toString();
-                window.history.replaceState({}, "", url.toString());
-              }
-              setScreen("theme-selection");
-            }}
-            onThemeSelect={handleThemeSelect}
-          />
-        )}
-        {screen === "create-theme" && user && (
-          <CreateTheme
-            user={user}
-            onBack={() => setScreen("theme-selection")}
-            onThemeCreated={(theme) => {
-              // Theme will be registered on backend (verified=false)
-              console.log("Theme created and registered:", theme);
-              setScreen("theme-selection");
-            }}
-          />
-        )}
-        {screen === "game-setup" && user && selectedTheme && (
-          <GameSetup
-            theme={selectedTheme}
-            onStart={handleGameStart}
-            onBack={() => setScreen("theme-selection")}
-          />
-        )}
-        {screen === "game-play" && user && gameState && (
-          <GamePlay
-            gameState={gameState}
-            setGameState={setGameState}
-            onRoundEnd={handleRoundEnd}
-            onGameEnd={handleGameEnd}
-            onRoundStart={updateGameViaAPI}
-          />
-        )}
-        {screen === "round-results" && user && gameState && (
-          <RoundResults
-            results={gameState.roundResults}
-            skipPenalty={Boolean(gameState.settings.skipPenalty)}
-            onConfirm={handleRoundResultsConfirm}
-          />
-        )}
-        {screen === "game-history" && user && (
-          <GameHistory
-            onBack={() => setScreen("theme-selection")}
-            onResumeGame={(gameState, gameId) => {
-              setGameId(gameId.toString());
-              localStorage.setItem("tag_current_game_id", gameId.toString());
-              setGameState(gameState);
-              setScreen("game-play");
-            }}
-          />
-        )}
+        <AnimatePresence mode="wait">
+          {screen === "login" && <Login />}
+          {screen === "theme-selection" && user && (
+            <ThemeSelection
+              user={user}
+              onThemeSelect={handleThemeSelect}
+              onCreateTheme={() => setScreen("create-theme")}
+              onThemeDetails={(themeId, filters) => {
+                setSelectedThemeId(themeId);
+                setThemeFilters(filters || null);
+                setScreen("theme-details");
+              }}
+            />
+          )}
+          {screen === "theme-details" && user && selectedThemeId && (
+            <ThemeDetails
+              user={user}
+              themeId={selectedThemeId}
+              filters={themeFilters || undefined}
+              onBack={(filters) => {
+                // Restore filters to URL if provided
+                if (filters) {
+                  const url = new URL(window.location.href);
+                  url.search = filters.toString();
+                  window.history.replaceState({}, "", url.toString());
+                }
+                setScreen("theme-selection");
+              }}
+              onThemeSelect={handleThemeSelect}
+            />
+          )}
+          {screen === "create-theme" && user && (
+            <CreateTheme
+              user={user}
+              onBack={() => setScreen("theme-selection")}
+              onThemeCreated={(theme) => {
+                // Theme will be registered on backend (verified=false)
+                console.log("Theme created and registered:", theme);
+                setScreen("theme-selection");
+              }}
+            />
+          )}
+          {screen === "game-setup" && user && selectedTheme && (
+            <GameSetup
+              theme={selectedTheme}
+              onStart={handleGameStart}
+              onBack={() => setScreen("theme-selection")}
+            />
+          )}
+          {screen === "game-play" && user && gameState && (
+            <GamePlay
+              gameState={gameState}
+              setGameState={setGameState}
+              onRoundEnd={handleRoundEnd}
+              onGameEnd={handleGameEnd}
+            />
+          )}
+          {screen === "round-results" && user && gameState && (
+            <RoundResults
+              results={gameState.roundResults}
+              skipPenalty={Boolean(gameState.settings.skipPenalty)}
+              onConfirm={handleRoundResultsConfirm}
+            />
+          )}
+          {screen === "game-history" && user && (
+            <GameHistory
+              onBack={() => setScreen("theme-selection")}
+              onResumeGame={(gameState, gameId) => {
+                setGameId(gameId.toString());
+                localStorage.setItem("tag_current_game_id", gameId.toString());
+                setGameState(gameState);
+                setScreen("game-play");
+              }}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

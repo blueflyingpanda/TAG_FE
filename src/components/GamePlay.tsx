@@ -1,3 +1,5 @@
+import type { PanInfo } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import type { GameState } from "../types";
 import {
@@ -12,7 +14,6 @@ interface GamePlayProps {
   setGameState: (state: GameState) => void;
   onRoundEnd: (results: { word: string; guessed: boolean }[]) => void;
   onGameEnd: () => void;
-  onRoundStart?: (gameState: GameState) => void;
 }
 
 export default function GamePlay({
@@ -20,7 +21,6 @@ export default function GamePlay({
   setGameState,
   onRoundEnd,
   onGameEnd,
-  onRoundStart,
 }: GamePlayProps) {
   const [currentWord, setCurrentWord] = useState<string>("");
   const [roundWords, setRoundWords] = useState<string[]>([]);
@@ -30,6 +30,13 @@ export default function GamePlay({
   const [currentTime, setCurrentTime] = useState(0);
   const timerIntervalRef = useRef<number | null>(null);
   const roundResultsRef = useRef<{ word: string; guessed: boolean }[]>([]);
+
+  const [roundEndedByTimeout, setRoundEndedByTimeout] = useState(false);
+
+  // Animation states
+  const [cardExitX, setCardExitX] = useState(0);
+  const [isCardExiting, setIsCardExiting] = useState(false);
+  const [nextWord, setNextWord] = useState<string>("");
 
   const availableWords = getAvailableWords(
     gameState.settings.theme,
@@ -65,7 +72,7 @@ export default function GamePlay({
         setCurrentTime(time);
 
         if (time <= 0) {
-          endRound();
+          endRound(true); // Pass true to indicate timeout
         }
       }, 100);
 
@@ -83,10 +90,31 @@ export default function GamePlay({
     gameState.settings.roundTimer,
   ]);
 
-  // Remove this useEffect - words are initialized in startRound
+  // Auto-start next round if previous round ended by timeout
+  useEffect(() => {
+    if (
+      roundEndedByTimeout &&
+      !gameState.isRoundActive &&
+      availableWords.length > 0
+    ) {
+      setRoundEndedByTimeout(false);
+      startRound();
+    }
+  }, [roundEndedByTimeout, gameState.isRoundActive, availableWords.length]);
 
   const startRound = () => {
     if (availableWords.length === 0) {
+      // When no words remain, find team(s) with highest score
+      const maxScore = Math.max(...Object.values(gameState.teamScores));
+      const winners = Object.entries(gameState.teamScores)
+        .filter(([, score]) => score === maxScore)
+        .map(([team]) => team);
+
+      if (winners.length > 0) {
+        // Don't call onGameEnd - let the winner display handle it
+        return;
+      }
+      // No teams (shouldn't happen) - end the game
       onGameEnd();
       return;
     }
@@ -105,21 +133,18 @@ export default function GamePlay({
       currentWordIndex: 0,
     });
 
-    // Notify parent component about round start for API updates
-    if (onRoundStart) {
-      onRoundStart({
-        ...gameState,
-        isRoundActive: true,
-        roundStartTime: Date.now(),
-        currentWordIndex: 0,
-      });
-    }
+    // Round start doesn't need API call - only results confirmation does
   };
 
-  const endRound = () => {
+  const endRound = (timedOut = false) => {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
+
+    // Capture results IMMEDIATELY before any async operations
+    const roundEndResults = [...roundResultsRef.current];
+
+    setRoundEndedByTimeout(timedOut);
 
     setGameState({
       ...gameState,
@@ -129,45 +154,73 @@ export default function GamePlay({
 
     // Get the latest results - don't count the last word if timer ended
     setTimeout(() => {
-      const currentResults = [...roundResultsRef.current];
-
-      setRoundResults(currentResults);
-      onRoundEnd(currentResults);
+      setRoundResults(roundEndResults);
+      onRoundEnd(roundEndResults);
     }, 100);
   };
 
   const handleWordAction = (guessed: boolean) => {
-    if (!currentWord) return;
+    if (!currentWord || isCardExiting) return;
 
-    const newResults = [...roundResults, { word: currentWord, guessed }];
-    setRoundResults(newResults);
-    roundResultsRef.current = newResults;
+    // Set animation direction based on action
+    setIsCardExiting(true);
+    setCardExitX(guessed ? 300 : -300);
 
-    const nextIndex = gameState.currentWordIndex + 1;
-    if (nextIndex >= roundWords.length) {
-      // No more words - end round
-      endRound();
-      return;
-    }
+    // Process the word action after animation starts
+    setTimeout(() => {
+      const newResults = [...roundResults, { word: currentWord, guessed }];
+      setRoundResults(newResults);
+      roundResultsRef.current = newResults;
 
-    const nextWord = roundWords[nextIndex];
-    setCurrentWord(nextWord);
-    setGameState({
-      ...gameState,
-      currentWordIndex: nextIndex,
-    });
+      const nextIndex = gameState.currentWordIndex + 1;
+      if (nextIndex >= roundWords.length) {
+        // No more words - end round
+        setIsCardExiting(false);
+        setCardExitX(0);
+        endRound();
+        return;
+      }
+
+      const nextWordValue = roundWords[nextIndex];
+      setNextWord(nextWordValue);
+      setCurrentWord(nextWordValue);
+      setGameState({
+        ...gameState,
+        currentWordIndex: nextIndex,
+      });
+
+      // Reset animation state
+      setTimeout(() => {
+        setIsCardExiting(false);
+        setCardExitX(0);
+        setNextWord("");
+      }, 150);
+    }, 200);
   };
 
-  // Swiping removed: guessed/skip via buttons only
+  // Check for winners: either reached target score or no words left
+  let winners: string[] = [];
 
-  const winner = checkWinCondition(gameState);
+  // First check if anyone reached the target score
+  const targetWinners = checkWinCondition(gameState);
+  if (targetWinners.length > 0) {
+    winners = targetWinners;
+  } else if (availableWords.length === 0) {
+    // No words left - find team(s) with highest score
+    const maxScore = Math.max(...Object.values(gameState.teamScores));
+    winners = Object.entries(gameState.teamScores)
+      .filter(([, score]) => score === maxScore)
+      .map(([team]) => team);
+  }
 
-  if (winner) {
+  if (winners.length > 0) {
     return (
       <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 shadow-xl max-w-2xl w-full mx-auto text-center">
         <h1 className="text-4xl font-bold text-white mb-4">🎉 Game Over!</h1>
         <h2 className="text-2xl font-semibold text-[#ECACAE] mb-8">
-          {winner} Wins!
+          {winners.length === 1
+            ? `${winners[0]} Wins!`
+            : `${winners.join(" & ")} Win!`}
         </h2>
         <div className="space-y-2 mb-8">
           {Object.entries(gameState.teamScores).map(([team, score]) => (
@@ -221,7 +274,7 @@ export default function GamePlay({
           {availableWords.length} words remaining
         </p>
         <button
-          onClick={startRound}
+          onClick={() => startRound()}
           className="px-8 py-4 bg-[#ECACAE] text-[#223164] rounded-lg font-semibold text-xl hover:opacity-90 transition"
         >
           Start Round
@@ -240,9 +293,32 @@ export default function GamePlay({
           </div>
           <div className="text-white/80">
             <div className="text-sm">Time</div>
-            <div className="text-2xl font-bold text-[#ECACAE]">
+            <motion.div
+              className="text-2xl font-bold text-[#ECACAE]"
+              animate={{
+                scale:
+                  (currentTime || remainingTime) <= 5 &&
+                  (currentTime || remainingTime) > 0
+                    ? [1, 1.2, 1]
+                    : 1,
+                opacity:
+                  (currentTime || remainingTime) <= 5 &&
+                  (currentTime || remainingTime) > 0
+                    ? [1, 0.5, 1]
+                    : 1,
+              }}
+              transition={{
+                duration: 0.5,
+                repeat:
+                  (currentTime || remainingTime) <= 5 &&
+                  (currentTime || remainingTime) > 0
+                    ? Infinity
+                    : 0,
+                repeatType: "loop",
+              }}
+            >
               {currentTime || remainingTime}s
-            </div>
+            </motion.div>
           </div>
         </div>
         <div className="text-white/60 text-sm">
@@ -250,25 +326,86 @@ export default function GamePlay({
         </div>
       </div>
 
-      <div className="bg-white/20 rounded-2xl p-12 min-h-[300px] flex items-center justify-center select-none">
-        <h2 className="text-4xl md:text-5xl font-bold text-white text-center">
-          {currentWord}
-        </h2>
-      </div>
+      <motion.div
+        className="bg-white/20 rounded-2xl p-12 min-h-[300px] flex items-center justify-center select-none relative overflow-hidden"
+        layout
+      >
+        <AnimatePresence mode="wait">
+          {/* Next card (preview) */}
+          {nextWord && (
+            <motion.div
+              key={`next-${nextWord}`}
+              className="absolute inset-0 flex items-center justify-center bg-white/10 rounded-2xl"
+              initial={{ scale: 0.8, y: 40, opacity: 0.5 }}
+              animate={{ scale: 0.9, y: 20, opacity: 0.7 }}
+              exit={{ scale: 0.8, y: 40, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="text-3xl md:text-4xl font-bold text-white/60 text-center">
+                {nextWord}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Current card */}
+          <motion.div
+            key={currentWord}
+            className="flex items-center justify-center w-full h-full bg-white/20 rounded-2xl absolute inset-0"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{
+              x: cardExitX,
+              opacity: 0,
+              scale: 0.5,
+              rotate: cardExitX > 0 ? 15 : cardExitX < 0 ? -15 : 0,
+              transition: { duration: 0.3, ease: "easeOut" },
+            }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.7}
+            onDragEnd={(_, info: PanInfo) => {
+              const swipeThreshold = 100;
+              if (info.offset.x > swipeThreshold) {
+                handleWordAction(true); // Swipe right = guessed
+              } else if (info.offset.x < -swipeThreshold) {
+                handleWordAction(false); // Swipe left = skip
+              }
+            }}
+            whileDrag={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          >
+            <h2 className="text-4xl md:text-5xl font-bold text-white text-center">
+              {currentWord}
+            </h2>
+          </motion.div>
+        </AnimatePresence>
+      </motion.div>
 
       <div className="mt-6 flex gap-4">
-        <button
+        <motion.button
           onClick={() => handleWordAction(false)}
           className="flex-1 px-6 py-4 bg-red-500/20 text-red-200 rounded-lg font-semibold hover:bg-red-500/30 transition"
+          whileTap={{
+            scale: 0.85,
+            rotate: -2,
+            boxShadow: "0 0 20px rgba(239, 68, 68, 0.5)",
+          }}
+          transition={{ type: "spring", stiffness: 400, damping: 17 }}
         >
           Skip ❌
-        </button>
-        <button
+        </motion.button>
+        <motion.button
           onClick={() => handleWordAction(true)}
           className="flex-1 px-6 py-4 bg-green-500/20 text-green-200 rounded-lg font-semibold hover:bg-green-500/30 transition"
+          whileTap={{
+            scale: 0.85,
+            rotate: 2,
+            boxShadow: "0 0 20px rgba(34, 197, 94, 0.5)",
+          }}
+          transition={{ type: "spring", stiffness: 400, damping: 17 }}
         >
           Guessed ✅
-        </button>
+        </motion.button>
       </div>
     </div>
   );

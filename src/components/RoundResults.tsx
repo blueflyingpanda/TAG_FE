@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 interface RoundResultsProps {
@@ -12,6 +13,11 @@ export default function RoundResults({
   skipPenalty = true,
 }: RoundResultsProps) {
   const [finalResults, setFinalResults] = useState(results);
+
+  // Update finalResults when results prop changes
+  useEffect(() => {
+    setFinalResults(results);
+  }, [results]);
 
   const toggleWord = (index: number) => {
     const updated = [...finalResults];
@@ -39,7 +45,18 @@ export default function RoundResults({
   }, [earned]);
 
   return (
-    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 shadow-xl max-w-2xl w-full mx-auto">
+    <motion.div
+      className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 shadow-xl max-w-2xl w-full mx-auto"
+      initial={{ y: "100vh", opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: "100vh", opacity: 0 }}
+      transition={{
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        duration: 0.6,
+      }}
+    >
       <h1 className="text-3xl font-bold text-white mb-2 text-center">
         Round Results
       </h1>
@@ -54,29 +71,50 @@ export default function RoundResults({
 
       <div className="mb-6 flex justify-center gap-6">
         <div className="text-center">
-          <div className="text-2xl font-bold text-green-400">
+          <motion.div
+            className="text-2xl font-bold text-green-400"
+            key={guessedCount}
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 500, damping: 20 }}
+          >
             {guessedCount}
-          </div>
+          </motion.div>
           <div className="text-white/60 text-sm">Guessed</div>
         </div>
         <div className="text-center">
-          <div
-            className={`text-2xl font-bold transform transition-transform duration-300 ${
-              pulse ? "scale-110" : "scale-100"
-            } ${
+          <motion.div
+            className={`text-2xl font-bold ${
               earned > 0
                 ? "text-yellow-300"
                 : earned < 0
                 ? "text-red-300"
                 : "text-white/80"
             }`}
+            key={earned}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: pulse ? 1.2 : 1, opacity: 1 }}
+            transition={{
+              type: "spring",
+              stiffness: 400,
+              damping: 15,
+              duration: 0.3,
+            }}
           >
             ⭐ {earned}
-          </div>
+          </motion.div>
           <div className="text-white/60 text-sm">Earned</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-red-400">{skippedCount}</div>
+          <motion.div
+            className="text-2xl font-bold text-red-400"
+            key={skippedCount}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 500, damping: 20 }}
+          >
+            {skippedCount}
+          </motion.div>
           <div className="text-white/60 text-sm">Skipped</div>
         </div>
       </div>
@@ -108,6 +146,6 @@ export default function RoundResults({
           Confirm
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }

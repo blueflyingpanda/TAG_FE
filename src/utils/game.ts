@@ -44,12 +44,15 @@ export const getRemainingTime = (state: GameState): number => {
   return Math.max(0, Math.ceil(remaining));
 };
 
-export const checkWinCondition = (state: GameState): string | null => {
-  for (const [team, score] of Object.entries(state.teamScores)) {
-    if (score >= state.settings.pointsRequired) {
-      return team;
-    }
+export const checkWinCondition = (state: GameState): string[] => {
+  const maxScore = Math.max(...Object.values(state.teamScores));
+  if (maxScore < state.settings.pointsRequired) {
+    return [];
   }
-  return null;
+
+  // Return all teams that have the maximum score
+  return Object.entries(state.teamScores)
+    .filter(([, score]) => score === maxScore)
+    .map(([team]) => team);
 };
 

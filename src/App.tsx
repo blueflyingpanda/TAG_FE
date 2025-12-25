@@ -322,22 +322,22 @@ function App() {
     updatedState.teamScores[currentTeam] += scoreChange;
     updatedState.wordsUsed.push(...finalResults.map((r) => r.word));
 
-    // Update game via API with the round results BEFORE clearing them
-    const tempStateForAPI = { ...updatedState, roundResults: finalResults };
-    updateGameViaAPI(tempStateForAPI);
-
     // Check if win condition is reached after updating score
     const winners = checkWinCondition(updatedState);
 
     if (winners.length > 0) {
       // Game ends - show winner screen immediately
+      // Update API with final state before clearing
+      const tempStateForAPI = { ...updatedState, roundResults: finalResults };
+      updateGameViaAPI(tempStateForAPI);
+
       storage.clearGameState();
       setGameState(updatedState);
       setScreen("game-play"); // Will show winner screen
       return;
     }
 
-    // Move to next team
+    // Move to next team BEFORE updating API
     updatedState.currentTeamIndex =
       (updatedState.currentTeamIndex + 1) %
       updatedState.settings.selectedTeams.length;
@@ -351,6 +351,10 @@ function App() {
     updatedState.isRoundActive = false;
     updatedState.roundStartTime = null;
     updatedState.currentWordIndex = 0;
+
+    // Update game via API with the round results AFTER moving to next team
+    const tempStateForAPI = { ...updatedState, roundResults: finalResults };
+    updateGameViaAPI(tempStateForAPI);
 
     setGameState(updatedState);
     setScreen("game-play");

@@ -6,6 +6,7 @@ import GamePlay from "./components/GamePlay";
 import GameSetup from "./components/GameSetup";
 import Login from "./components/Login";
 import RoundResults from "./components/RoundResults";
+import Rules from "./components/Rules";
 import ThemeDetails from "./components/ThemeDetails";
 import ThemeSelection from "./components/ThemeSelection";
 import type { GameSettings, GameState, Theme, User } from "./types";
@@ -27,7 +28,8 @@ type AppScreen =
   | "game-play"
   | "round-results"
   | "game-history"
-  | "create-theme";
+  | "create-theme"
+  | "rules";
 
 function App() {
   const initialUser = storage.getUser();
@@ -464,6 +466,18 @@ function App() {
                 </button>
 
                 <button
+                  onClick={() => setScreen("rules")}
+                  className={`px-4 py-2 rounded-lg font-semibold transition ${
+                    screen === "rules"
+                      ? "bg-white/20 text-white cursor-default"
+                      : "bg-[#ECACAE] text-[#223164] hover:opacity-90"
+                  }`}
+                  disabled={screen === "rules"}
+                >
+                  Rules
+                </button>
+
+                <button
                   onClick={handleLogout}
                   className="px-4 py-2 bg-[#ECACAE] text-[#223164] rounded-lg font-semibold hover:opacity-90 transition"
                 >
@@ -549,6 +563,7 @@ function App() {
               }}
             />
           )}
+          {screen === "rules" && <Rules />}
         </AnimatePresence>
       </div>
     </div>
